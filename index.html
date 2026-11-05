@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111923"><meta name="description" content="PetroTransit — маршруты и остановки общественного транспорта Петропавловска.">
+<title>PetroTransit — транспорт Петропавловска</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="brand">↗ Petro<span>Transit</span></div><div class="headtools"><button id="langBtn">Қазақша</button><button id="installBtn" class="optional hidden">Установить</button><button id="shareBtn">Поделиться</button></div></header><div id="offBar" class="hidden" style="background:#4a2b1b;color:#ffd2a8;text-align:center;font-size:12px;padding:4px">Нет сети: карта и поиск координат могут не работать</div>
+<div class="app">
+<aside>
+<div style="color:var(--green);font-size:10px;font-weight:800;letter-spacing:1.3px">ГОРОДСКАЯ МОБИЛЬНОСТЬ</div>
+<h1 id="mainTitle">Транспорт Петропавловска</h1><p class="sub" id="subtitle">Найди маршрут, остановку и спланируй поездку.</p>
+<input id="search" class="search" placeholder="Поиск маршрута или остановки…">
+<div class="tabs">
+<button class="tab active" data-view="routes" id="tabRoutes">Маршруты</button>
+<button class="tab" data-view="favorites" id="tabFav">Избранное</button>
+<button class="tab" data-view="trip" id="tabTrip">Путь</button>
+<button class="tab" data-view="info" id="tabInfo">Помощь</button>
+</div>
+<section id="routesView"><div class="muted" id="routeCount">Маршруты из справочника</div><div class="routegrid" id="routeButtons"></div><div id="stopHits"></div><div class="muted" id="warmMsg"></div><div class="card" id="routeCard"><h3>Выберите маршрут</h3><p class="muted">Остановки появятся в списке.</p></div></section>
+<section id="favoritesView" class="hidden"><div class="card"><h3>Избранные маршруты</h3><div id="favoriteList" class="muted">Нажмите ☆ рядом с маршрутом, чтобы сохранить его.</div></div></section>
+<section id="tripView" class="hidden"><div class="card"><h3>Как доехать</h3><input id="fromQ" list="allStops" placeholder="Откуда (остановка)"><input id="toQ" list="allStops" placeholder="Куда (остановка)"><datalist id="allStops"></datalist><button class="btn primary full" id="findTrip">Найти поездку</button><div id="tripOptions"></div><p class="muted">Ищет прямые маршруты и поездки с одной пересадкой по совпадающим названиям остановок. Расписание и реальное движение не учитываются.</p></div><div class="card"><h3>Планировщик поездки</h3><label class="muted">Маршрут</label><select id="tripRoute"></select><label class="muted">От остановки</label><select id="fromStop"></select><label class="muted">До остановки</label><select id="toStop"></select><button class="btn primary full" id="planTrip">Показать путь</button><div class="statusmsg" id="tripMsg"></div><button class="btn full" id="tripReset">Сбросить участок</button><button class="btn full" id="myLocation">Использовать моё местоположение</button><p class="muted">Планировщик показывает участок выбранного маршрута между остановками. Это не поиск оптимального пути по всему городу.</p></div></section>
+<section id="infoView" class="hidden"><div class="card"><h3>Как пользоваться</h3><ol class="muted"><li>Выберите номер маршрута.</li><li>Нажмите остановку в списке, чтобы приблизить карту.</li><li>Добавьте маршрут в избранное.</li><li>В планировщике выберите две остановки или найдите поездку с пересадкой в блоке «Как доехать».</li></ol></div><div class="card"><h3>Обратная связь</h3><p class="muted">Сообщите об ошибке в остановке или маршруте. Сообщение попадёт напрямую в диспетчерскую.</p><button class="btn primary full" id="reportBtn">Сообщить об ошибке</button></div><div class="card"><h3>О проекте</h3><p class="muted">PetroTransit — городской транспортный веб-прототип. Использует открытые карты OpenStreetMap/CARTO, Photon и OSRM.</p></div></section>
+<div class="card"><div class="row"><b id="activeTitle">Активный маршрут</b><button class="btn small" id="favBtn">☆ В избранное</button></div><div class="muted" id="activeRouteName">—</div><div class="arrival" id="arrivalInfo">Расписание/GPS не подключены</div></div>
+<div class="card" id="etaCard"><div class="row"><b id="etaTitle">Время прибытия</b><button class="btn small" id="etaNear">📍 Ближайшая ко мне</button></div><select id="etaStop" aria-label="Остановка"></select><div class="arrival" id="etaOut">Выберите остановку</div><small class="muted" id="etaNote">Расчёт по расписанию диспетчерской и длине маршрута (≈18 км/ч + 20 с на остановку), не по GPS. Фактическое время может отличаться.</small></div>
+<div class="card"><h3 id="stopHeading">Остановки маршрута</h3><ol class="stoplist" id="stopList"></ol><div class="statusmsg" id="status"></div></div>
+<div id="publicAlerts"></div><div id="publicServiceStatus"></div><div class="notice" id="dataNotice"><b>Важно:</b> часть маршрутов содержит только подтверждённые конечные точки; списки остановок составлены по публичным данным 2ГИС (ноябрь 2026), это не официальная схема перевозчика. Автоматическое геокодирование может ошибаться. GPS автобусов, точное расписание и live-пробки не подключены. Перед публичным запуском необходимо проверить данные у перевозчиков/акимата.</div>
+<footer>© PetroTransit · Учебный прототип · <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a></footer>
+</aside>
+<section class="maparea"><div id="map"></div><div class="maptools"><button class="btn" id="cityBtn">Петропавловск</button><button class="btn" id="busBtn">🚌 Автобусы: демо</button><button class="btn" id="trafficBtn">Демо-пробки</button><button class="btn dispatch-entry" id="dispatchBtn">Диспетчерская</button></div><div class="maplegend"><b>Карта города</b> · OpenStreetMap<br><span class="dot"></span>Маршрут <span class="dot" style="background:#ffc65c"></span>Участок пути<br><span style="color:#9baab7">🚌 Автобусы на карте — ДЕМО-анимация, не реальные позиции (GPS не подключён)</span></div></section>
+</div>
+<div class="modal" id="reportModal"><div class="modalbox"><div class="row"><h2>Сообщить об ошибке</h2><button class="btn" data-close="reportModal">Закрыть</button></div><label>Маршрут</label><input id="reportRoute"><label>Остановка</label><input id="reportStop"><label>Что не так?</label><textarea id="reportText" placeholder="Например: остановка перенесена…"></textarea><button class="btn primary full" id="sendReport">Отправить сообщение</button></div></div>
+
+<div class="dispatch-wrap" id="dispatchApp">
+ <div class="dispatch-shell">
+  <div class="dispatch-head">
+   <div><div style="color:#43d49a;font-size:10px;font-weight:800;letter-spacing:1px">PETROTRANSIT · STAFF</div><h2>Диспетчерская</h2><div class="muted">Управление маршрутами, объявлениями и ручными статусами без GPS</div></div>
+   <div class="row"><span class="dispatch-badge" id="dispatchRoleBadge">Режим сотрудника</span><button class="btn" id="dispatchClose">Закрыть</button></div>
+  </div>
+  <div id="dispatchLogin" style="padding:24px;max-width:460px;margin:auto"><p class="muted" id="dbStatus"></p><input id="dispatchEmail" type="email" class="hidden" placeholder="Email диспетчера" autocomplete="username" style="width:100%;margin-bottom:8px">
+   <h3>Вход сотрудника</h3><p class="muted">Демо-доступ защищён PIN-кодом. Для реальной публикации замените его серверной авторизацией.</p>
+   <label class="muted">PIN диспетчера</label><input id="dispatchPin" type="password" class="search" placeholder="Введите PIN" style="max-width:100%">
+   <button class="btn primary full" id="dispatchLoginBtn">Войти</button><div class="statusmsg" id="dispatchLoginMsg"></div>
+   <p class="muted">Демо-PIN указан в README. Смените его после первого входа (вкладка «Обзор смены»).</p>
+  </div>
+  <div class="dispatch-body hidden" id="dispatchMain">
+   <nav class="dispatch-nav">
+    <button class="btn active" data-dtab="overview">Обзор смены</button>
+    <button class="btn" data-dtab="routes">Маршруты и остановки</button>
+    <button class="btn" data-dtab="service">Статусы движения</button>
+    <button class="btn" data-dtab="alerts">Объявления</button>
+    <button class="btn" data-dtab="timetable">Расписание</button>
+    <button class="btn" data-dtab="feedback">Обращения</button>
+   </nav>
+   <div class="dispatch-content" id="dispatchContent"></div>
+  </div>
+ </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body></html>

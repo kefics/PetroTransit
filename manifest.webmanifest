@@ -1,0 +1,12 @@
+{
+  "name": "PetroTransit — Петропавловск",
+  "short_name": "PetroTransit",
+  "start_url": "./",
+  "scope": "./",
+  "lang": "ru",
+  "display": "standalone",
+  "background_color": "#101720",
+  "theme_color": "#111923",
+  "description": "Маршруты и остановки Петропавловска",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
