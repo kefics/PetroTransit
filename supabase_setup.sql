@@ -27,9 +27,13 @@ alter table public.report_submissions enable row level security;
 drop policy if exists "public can submit reports" on public.report_submissions;
 drop policy if exists "dispatchers can read reports" on public.report_submissions;
 drop policy if exists "dispatchers can update reports" on public.report_submissions;
+drop policy if exists "dispatchers can delete done reports" on public.report_submissions;
 create policy "public can submit reports" on public.report_submissions
   for insert to anon, authenticated with check (char_length(description) between 1 and 5000);
 create policy "dispatchers can read reports" on public.report_submissions
   for select to authenticated using (true);
 create policy "dispatchers can update reports" on public.report_submissions
   for update to authenticated using (true) with check (status in ('new','done'));
+-- Диспетчеры могут удалять только уже обработанные обращения.
+create policy "dispatchers can delete done reports" on public.report_submissions
+  for delete to authenticated using (status = 'done');
